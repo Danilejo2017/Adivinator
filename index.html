@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Adivina el Número - 8 Jugadores + Temporizador</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; text-align: center; padding: 20px; }
+    input, button { padding: 8px; margin: 5px; font-size: 16px; }
+    .hidden { display: none; }
+    #timer { font-size: 24px; font-weight: bold; color: red; margin-top: 10px; }
+    #errorMsg { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h1>🎯 Adivina el Número</h1>
+  <div id="setup">
+    <p>Introduce los nombres de hasta 8 jugadores:</p>
+    <div id="playerInputs"></div>
+    <h3 id="errorMsg" class="hidden">Todos los jugadores no pueden ser bots. ¡Agrega un jugador!</h3>
+    <button onclick="startGame()">Comenzar Juego</button>
+  </div>
+
+  <div id="game" class="hidden">
+    <p id="turnInfo"></p>
+    <input type="number" id="guessInput" min="1" max="100" placeholder="Tu intento">
+    <button onclick="makeGuess()">Adivinar</button>
+    <p id="feedback"></p>
+    <p id="timer">⏳ Tiempo: 15</p>
+  </div>
+
+  <script>
+    const MAX_PLAYERS = 8;
+    let players = [];
+    let bots = [];
+    let currentPlayerIndex = 0;
+    let secretNumber = null;
+    let gameOver = false;
+    let timerInterval;
+    let timeLeft = 15;
+
+    const playerInputsContainer = document.getElementById('playerInputs');
+    for (let i = 0; i < MAX_PLAYERS; i++) {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = `Jugador ${i + 1}`;
+      input.id = `player${i}`;
+      playerInputsContainer.appendChild(input);
+      playerInputsContainer.appendChild(document.createElement('br'));
+    }
+
+    function startGame() {
+      players = [];
+      bots = [];
+      let playerCount = 0;
+      for (let i = 0; i < MAX_PLAYERS; i++) {
+        let name = document.getElementById(`player${i}`).value.trim();
+        if (name === '') {
+          name = `🤖 Bot ${i + 1}`;
+          bots.push(true);
+        } else {
+          bots.push(false);
+          playerCount++;
+        }
+        players.push(name);
+      }
+
+      if (playerCount === 0) {
+        document.getElementById('errorMsg').classList.remove('hidden');
+        return;
+      } else {
+        document.getElementById('errorMsg').classList.add('hidden');
+      }
+
+      if (secretNumber === null) {
+        secretNumber = Math.floor(Math.random() * 100) + 1;
+      }
+      currentPlayerIndex = 0;
+      gameOver = false;
+
+      document.getElementById('setup').classList.add('hidden');
+      document.getElementById('game').classList.remove('hidden');
+      updateTurn();
+    }
+
+    function updateTurn() {
+      if (gameOver) return;
+
+      document.getElementById('turnInfo').textContent = `Turno de: ${players[currentPlayerIndex]}`;
+      document.getElementById('guessInput').value = '';
+      document.getElementById('feedback').textContent = '';
+
+      if (bots[currentPlayerIndex]) {
+        setTimeout(botGuess, 2000);
+      } else {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timeLeft = 15;
+      document.getElementById('timer').textContent = `⏳ Tiempo: ${timeLeft}`;
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer').textContent = `⏳ Tiempo: ${timeLeft}`;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById('feedback').textContent = `⏰ ¡Tiempo agotado para ${players[currentPlayerIndex]}!`;
+          nextPlayer();
+        }
+      }, 1000);
+    }
+
+    function makeGuess() {
+      if (gameOver) return;
+
+      const guess = parseInt(document.getElementById('guessInput').value);
+      const feedback = document.getElementById('feedback');
+      const player = players[currentPlayerIndex];
+
+      if (isNaN(guess) || guess < 1 || guess > 100) {
+        feedback.textContent = "Introduce un número del 1 al 100.";
+        return;
+      }
+
+      clearInterval(timerInterval);
+
+      if (guess === secretNumber) {
+        feedback.textContent = `🎉 ¡${player} ha adivinado el número ${secretNumber} y ha ganado!`;
+        gameOver = true;
+        document.getElementById('turnInfo').textContent = '';
+        document.getElementById('timer').textContent = '';
+      } else if (guess < secretNumber) {
+        feedback.textContent = "📈 El número es mayor.";
+        nextPlayer();
+      } else {
+        feedback.textContent = "📉 El número es menor.";
+        nextPlayer();
+      }
+    }
+
+    function botGuess() {
+      if (gameOver) return;
+      const guess = Math.floor(Math.random() * 100) + 1;
+      document.getElementById('feedback').textContent = `🤖 ${players[currentPlayerIndex]} intentó con ${guess}...`;
+
+      setTimeout(() => {
+        if (guess === secretNumber) {
+          document.getElementById('feedback').textContent = `🎉 ¡${players[currentPlayerIndex]} ha adivinado el número ${secretNumber} y ha ganado!`;
+          gameOver = true;
+          document.getElementById('turnInfo').textContent = '';
+          document.getElementById('timer').textContent = '';
+        } else if (guess < secretNumber) {
+          document.getElementById('feedback').textContent += " 📈 El número es mayor.";
+          nextPlayer();
+        } else {
+          document.getElementById('feedback').textContent += " 📉 El número es menor.";
+          nextPlayer();
+        }
+      }, 1500);
+    }
+
+    function nextPlayer() {
+      currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+      setTimeout(updateTurn, 1500);
+    }
+  </script>
+
+</body>
+</html>
