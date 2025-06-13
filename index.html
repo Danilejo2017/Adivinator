@@ -9,6 +9,7 @@
     .hidden { display: none; }
     #timer { font-size: 24px; font-weight: bold; color: red; margin-top: 10px; }
     #errorMsg { color: red; font-weight: bold; }
+    .player-image { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #ccc; margin: 5px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -22,11 +23,13 @@
   </div>
 
   <div id="game" class="hidden">
+    <div id="playerAvatars"></div>
     <p id="turnInfo"></p>
     <input type="number" id="guessInput" min="1" max="100" placeholder="Tu intento">
     <button onclick="makeGuess()">Adivinar</button>
     <p id="feedback"></p>
     <p id="timer">⏳ Tiempo: 15</p>
+    <button id="newGameBtn" class="hidden" onclick="resetGame()">Nueva partida</button>
   </div>
 
   <script>
@@ -38,6 +41,8 @@
     let gameOver = false;
     let timerInterval;
     let timeLeft = 15;
+    let avatars = [];
+    let savedNames = [];
 
     const playerInputsContainer = document.getElementById('playerInputs');
     for (let i = 0; i < MAX_PLAYERS; i++) {
@@ -46,15 +51,47 @@
       input.placeholder = `Jugador ${i + 1}`;
       input.id = `player${i}`;
       playerInputsContainer.appendChild(input);
+
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.id = `avatar${i}`;
+      playerInputsContainer.appendChild(fileInput);
+
       playerInputsContainer.appendChild(document.createElement('br'));
+    }
+
+    function generateAvatar(name) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 50;
+      canvas.height = 50;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 60%)`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = 'white';
+      ctx.font = '24px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(name.charAt(0).toUpperCase(), canvas.width / 2, canvas.height / 2);
+
+      return canvas.toDataURL();
     }
 
     function startGame() {
       players = [];
       bots = [];
+      avatars = [];
       let playerCount = 0;
+      const avatarContainer = document.getElementById('playerAvatars');
+      avatarContainer.innerHTML = '';
+
       for (let i = 0; i < MAX_PLAYERS; i++) {
         let name = document.getElementById(`player${i}`).value.trim();
+        savedNames[i] = name;
+        const avatarInput = document.getElementById(`avatar${i}`);
+
         if (name === '') {
           name = `🤖 Bot ${i + 1}`;
           bots.push(true);
@@ -63,6 +100,22 @@
           playerCount++;
         }
         players.push(name);
+
+        let avatarUrl;
+        if (avatarInput.files && avatarInput.files[0]) {
+          avatarUrl = URL.createObjectURL(avatarInput.files[0]);
+        } else {
+          avatarUrl = generateAvatar(name);
+        }
+        avatars.push(avatarUrl);
+
+        const img = document.createElement('img');
+        img.src = avatarUrl;
+        img.alt = name;
+        img.title = name;
+        img.className = 'player-image';
+        img.onclick = () => document.getElementById(`avatar${i}`).click();
+        avatarContainer.appendChild(img);
       }
 
       if (playerCount === 0) {
@@ -132,6 +185,7 @@
         gameOver = true;
         document.getElementById('turnInfo').textContent = '';
         document.getElementById('timer').textContent = '';
+        document.getElementById('newGameBtn').classList.remove('hidden');
       } else if (guess < secretNumber) {
         feedback.textContent = "📈 El número es mayor.";
         nextPlayer();
@@ -152,6 +206,7 @@
           gameOver = true;
           document.getElementById('turnInfo').textContent = '';
           document.getElementById('timer').textContent = '';
+          document.getElementById('newGameBtn').classList.remove('hidden');
         } else if (guess < secretNumber) {
           document.getElementById('feedback').textContent += " 📈 El número es mayor.";
           nextPlayer();
@@ -165,6 +220,16 @@
     function nextPlayer() {
       currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
       setTimeout(updateTurn, 1500);
+    }
+
+    function resetGame() {
+      for (let i = 0; i < MAX_PLAYERS; i++) {
+        document.getElementById(`player${i}`).value = savedNames[i] || '';
+      }
+      secretNumber = null;
+      document.getElementById('newGameBtn').classList.add('hidden');
+      document.getElementById('setup').classList.remove('hidden');
+      document.getElementById('game').classList.add('hidden');
     }
   </script>
 
